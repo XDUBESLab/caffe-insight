@@ -1,0 +1,22 @@
+{
+  "name": "caffe-insight",
+  "version": "0.1.0",
+  "description": "Caffe分析",
+  "main": "render.js",
+  "scripts": {
+    "test": "node test/all.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XDUBESLab/caffe-insight.git"
+  },
+  "author": "Yufei Liu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/XDUBESLab/caffe-insight/issues"
+  },
+  "homepage": "https://github.com/XDUBESLab/caffe-insight#readme",
+  "dependencies": {
+    "swig": "^1.4.2"
+  }
+}
