@@ -51,15 +51,11 @@ module.exports = function (grunt) {
   });
   grunt.registerTask('init', ['init:caffe', 'init:wiki']);
   grunt.registerTask('index', function () {
-    var done = this.async();
+    this.async();
     analyze(function (err, dbfilename) {
       const fileszie = fs.statSync(dbfilename).size;
       grunt.log.ok('' + fileszie + ' Bytes written.');
     });
-    return true;
-    setTimeout(function () {
-      done(false);
-    }, 10000);
   });
   grunt.registerTask('default', 'usage');
 };
