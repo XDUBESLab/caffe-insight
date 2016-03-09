@@ -4,6 +4,7 @@ const caffe_repo = 'https://github.com/BVLC/caffe.git';
 const caffe_local = 'caffe';
 var analyze = require('./analyzer');
 var fs = require('fs');
+var prettysize = require('filesize');
 
 module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-git');
@@ -54,7 +55,7 @@ module.exports = function (grunt) {
     this.async();
     analyze(function (err, dbfilename) {
       const fileszie = fs.statSync(dbfilename).size;
-      grunt.log.ok('' + fileszie + ' Bytes written.');
+      grunt.log.ok(prettysize(fileszie) + ' (' + fileszie + ' Bytes) written.');
     });
   });
   grunt.registerTask('default', 'usage');
