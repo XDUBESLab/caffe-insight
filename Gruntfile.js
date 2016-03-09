@@ -2,7 +2,7 @@ const wiki_repo = 'https://github.com/XDUBESLab/caffe-insight.wiki.git';
 const wiki_local = 'caffe-insight-wiki';
 const caffe_repo = 'https://github.com/BVLC/caffe.git';
 const caffe_local = 'caffe';
-var analyze = require('./analyzer');
+var analyze = require('./src/analyzer');
 var fs = require('fs');
 var prettysize = require('filesize');
 

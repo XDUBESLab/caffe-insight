@@ -9,7 +9,7 @@ var async = require('async');
 var fs = require('fs');
 var grunt = require('grunt');
 var _ = require('underscore');
-var pr = require('./src/pr');
+var pr = require('./pr');
 
 var symbols = pr.symbols;
 
