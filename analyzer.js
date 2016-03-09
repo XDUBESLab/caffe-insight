@@ -6,18 +6,18 @@
 
 var xml2js = require('xml2js');
 var async = require('async');
-var loki = require('lokijs');
 var fs = require('fs');
 var grunt = require('grunt');
 var _ = require('underscore');
+var pr = require('./src/pr');
+
+var symbols = pr.symbols;
 
 const targetKinds = new Set([
   "class", "variable", "function", "typedef"
 ]);
 const xmlRoot = 'caffe/doxygen/xml/';
 
-var db = new loki('symbols.json');
-var symbols = db.addCollection('symbols');
 
 class CompoundIndex {
   constructor(obj) {
@@ -189,9 +189,9 @@ function buildIndex(callback) {
       });
       grunt.log.ok();
       grunt.log.write('Saving Database...');
-      db.save();
+      pr.sync();
       grunt.log.ok();
-      callback(null, db.filename);
+      callback(null, pr.filename);
     }], callback);
 }
 
