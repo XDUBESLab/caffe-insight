@@ -36,7 +36,7 @@ class CompoundIndex {
 class MemberIndex extends CompoundIndex {
   constructor(parent, obj) {
     super(obj);
-    this.qualifiedName = parent + '::' + this.qualifiedName;
+    this.qualifiedName = parent + '::' + obj.name;
   }
 
   relpath() {
@@ -69,7 +69,7 @@ class Index {
 class MemberDef {
   constructor(parent, obj) {
     const attr = obj['$'];
-    this.qualifiedName = parent + '::' + attr.name;
+    this.qualifiedName = parent + '::' + obj.name;
     this.kind = attr.kind;
     this.refid = attr.id;
     this.protected = attr.prot === 'yes';
@@ -86,7 +86,7 @@ class CompoundDef {
     const compounddefs = obj.doxygen.compounddef;
     if (Array.isArray(compounddefs) && compounddefs.length === 1) {
       const compounddef = compounddefs[0];
-      const name = compounddef.compoundname;
+      const name = compounddef.compoundname[0];
       this.refid = compounddef['$'].id;
       this.kind = compounddef['$'].kind;
       this.qualifiedName = name;
