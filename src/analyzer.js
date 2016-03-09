@@ -11,8 +11,6 @@ var grunt = require('grunt');
 var _ = require('underscore');
 var pr = require('./pr');
 
-var symbols = pr.symbols;
-
 const targetKinds = new Set([
   "class", "variable", "function", "typedef"
 ]);
@@ -176,21 +174,27 @@ function buildIndex(callback) {
       callback(null, index, compounds);
     },
     function (index, compounds, callback) {
-      grunt.log.write('Flattening references...');
-      compounds.forEach(function (c) {
-        symbols.insert(c);
-        c.members.forEach(function (mr) {
-          symbols.insert(mr);
-        });
+      pr.initialize(function (err, symbols, sync) {
+        async.waterfall([
+          function (callback) {
+            grunt.log.write('Flattening references...');
+            compounds.forEach(function (c) {
+              symbols.insert(c);
+              c.members.forEach(function (mr) {
+                symbols.insert(mr);
+              });
+            });
+            grunt.log.ok();
+            grunt.log.write('Saving Database...');
+            return callback(null);
+          },
+          sync,
+          function (callback) {
+            grunt.log.ok();
+            return callback(null, pr.filename);
+          }
+        ], callback);
       });
-      grunt.log.ok();
-      grunt.log.write('Saving Database...');
-      return callback(null);
-    },
-    pr.sync,
-    function (callback) {
-      grunt.log.ok();
-      callback(null, pr.filename);
     }], callback);
 }
 

@@ -1,12 +1,22 @@
 var loki = require('lokijs');
+var grunt = require('grunt');
+const localJson = 'symbols.json';
+const collectionSymbols = 'symbols';
 
-var db = new loki('symbols.json');
-var symbols = db.addCollection('symbols');
-
-exports.db = db;
-exports.symbols = symbols;
-exports.filename = db.filename;
-exports.sync = function (callback) {
-  return db.save(callback);
+exports.immutable = function (callback) {
+  var db = new loki(localJson);
+  db.loadDatabase(function (err, data) {
+    callback(null, db.getCollection(collectionSymbols));
+  });
 };
 
+exports.initialize = function (callback) {
+  var db = new loki(localJson);
+  var symbols = db.addCollection(collectionSymbols, {indices: ['qualifiedName', 'refid']});
+  var sync = function (callback) {
+    db.saveDatabase(callback);
+  };
+  return callback(null, symbols, sync);
+};
+
+exports.filename = localJson;
