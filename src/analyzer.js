@@ -90,7 +90,7 @@ class CompoundDef {
       this.refid = compounddef['$'].id;
       this.kind = compounddef['$'].kind;
       this.qualifiedName = name;
-      this.location = compounddef.location['$'];
+      this.location = compounddef.location[0]['$'];
       this.memberRefs = compounddef.listofallmembers[0].member.map(function (mr) {
         return _.zip(mr.scope, mr.name).map(function (pair) {
           return pair.join('::');
