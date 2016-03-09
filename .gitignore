@@ -166,3 +166,14 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Ignore cloned wiki repo
+caffe-insight-wiki/
+caffe/
+
+# Ignore some of WebStorm staff
+.idea/deployment.xml
+.idea/webServers.xml
+.idea/watcherTasks.xml
+
+# Ignore DB files
+symbols.json

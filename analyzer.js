@@ -155,38 +155,46 @@ function loadCompounds(index, callback) {
   });
 }
 
-async.waterfall([
-  parseIndex.bind(this, xmlRoot + 'index.xml'),
-  function (index, callback) {
-    grunt.log.write('Loading compounds...');
-    callback(null, index);
-  },
-  loadCompounds,
-  function (index, compounds, callback) {
-    grunt.log.ok();
-    grunt.log.writeln('Compounds loaded: ' + compounds.length);
-    grunt.log.writeln('Member references loaded: ' + compounds.reduce(function (p, c) {
-        return p + c.memberRefs.length;
-      }, 0));
-    grunt.log.writeln('Members loaded: ' + compounds.reduce(function (p, c) {
-        return p + c.members.length;
-      }, 0));
-    callback(null, index, compounds);
-  },
-  function (index, compounds) {
-    grunt.log.write('Flattening references...');
-    compounds.forEach(function (c) {
-      symbols.insert(c);
-      c.members.forEach(function (mr) {
-        symbols.insert(mr);
+function buildIndex(callback) {
+  if (!grunt.file.exists(xmlRoot)) {
+    grunt.log.error('Doxygen generated XML files not found.');
+    return;
+  }
+  grunt.log.writeln('Indexing Doxygen generated XML files...');
+  async.waterfall([
+    parseIndex.bind(this, xmlRoot + 'index.xml'),
+    function (index, callback) {
+      grunt.log.write('Loading compounds...');
+      callback(null, index);
+    },
+    loadCompounds,
+    function (index, compounds, callback) {
+      grunt.log.ok();
+      grunt.log.writeln('Compounds loaded: ' + compounds.length);
+      grunt.log.writeln('Member references loaded: ' + compounds.reduce(function (p, c) {
+          return p + c.memberRefs.length;
+        }, 0));
+      grunt.log.writeln('Members loaded: ' + compounds.reduce(function (p, c) {
+          return p + c.members.length;
+        }, 0));
+      callback(null, index, compounds);
+    },
+    function (index, compounds, callback) {
+      grunt.log.write('Flattening references...');
+      compounds.forEach(function (c) {
+        symbols.insert(c);
+        c.members.forEach(function (mr) {
+          symbols.insert(mr);
+        });
       });
-    });
-    grunt.log.ok();
-    grunt.log.write('Saving Database...');
-    db.save();
-    grunt.log.ok();
-  }]);
+      grunt.log.ok();
+      grunt.log.write('Saving Database...');
+      db.save();
+      grunt.log.ok();
+      callback(null, db.filename);
+    }], callback);
+}
 
-module.exports = parseXML;
+module.exports = buildIndex;
 
 
