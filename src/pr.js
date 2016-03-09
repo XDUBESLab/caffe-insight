@@ -5,7 +5,7 @@ const collectionSymbols = 'symbols';
 
 exports.immutable = function (callback) {
   var db = new loki(localJson);
-  db.loadDatabase(function (err, data) {
+  db.loadDatabase({}, function (err, data) {
     callback(null, db.getCollection(collectionSymbols));
   });
 };
