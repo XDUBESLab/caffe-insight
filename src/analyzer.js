@@ -156,10 +156,6 @@ function loadCompounds(index, callback) {
 }
 
 function buildIndex(callback) {
-  if (!grunt.file.exists(xmlRoot)) {
-    grunt.log.error('Doxygen generated XML files not found.');
-    return;
-  }
   grunt.log.writeln('Indexing Doxygen generated XML files...');
   async.waterfall([
     parseIndex.bind(this, xmlRoot + 'index.xml'),
@@ -189,7 +185,10 @@ function buildIndex(callback) {
       });
       grunt.log.ok();
       grunt.log.write('Saving Database...');
-      pr.sync();
+      return callback(null);
+    },
+    pr.sync,
+    function (callback) {
       grunt.log.ok();
       callback(null, pr.filename);
     }], callback);

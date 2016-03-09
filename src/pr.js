@@ -6,7 +6,7 @@ var symbols = db.addCollection('symbols');
 exports.db = db;
 exports.symbols = symbols;
 exports.filename = db.filename;
-exports.sync = function () {
-  db.save();
+exports.sync = function (callback) {
+  return db.save(callback);
 };
 

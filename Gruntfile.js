@@ -53,8 +53,8 @@ module.exports = function (grunt) {
   grunt.registerTask('init', ['init:caffe', 'init:wiki']);
   grunt.registerTask('index', function () {
     this.async();
-    analyze(function (err, dbfilename) {
-      const fileszie = fs.statSync(dbfilename).size;
+    analyze(function (err, dbFilename) {
+      const fileszie = fs.statSync(dbFilename).size;
       grunt.log.ok(prettysize(fileszie) + ' (' + fileszie + ' Bytes) written.');
     });
   });
