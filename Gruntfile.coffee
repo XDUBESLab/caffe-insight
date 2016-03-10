@@ -1,15 +1,16 @@
-wikiRepo = 'https://github.com/XDUBESLab/caffe-insight.wiki.git'
-wikiLocal = 'caffe-insight-wiki'
-caffeRepo = 'https://github.com/BVLC/caffe.git'
-caffeLocal = 'caffe'
-draftLocal = 'draft'
-renderedLocal = 'rendered'
-
 fs = require 'fs'
 path = require 'path'
 render = require './src/render'
 analyze = require './src/analyzer'
 prettysize = require 'filesize'
+
+projectRoot = __dirname
+wikiRepo = 'https://github.com/XDUBESLab/caffe-insight.wiki.git'
+caffeRepo = 'https://github.com/BVLC/caffe.git'
+wikiLocal = path.join projectRoot, 'caffe-insight-wiki'
+caffeLocal = path.join projectRoot, 'caffe'
+draftLocal = path.join projectRoot, 'draft'
+renderedLocal = path.join projectRoot, 'rendered'
 
 module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-git'
