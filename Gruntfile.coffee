@@ -1,3 +1,5 @@
+require 'coffee-script'
+
 fs = require 'fs'
 path = require 'path'
 render = require './src/render'
@@ -44,7 +46,7 @@ module.exports = (grunt) ->
       grunt.log.ok
 
   grunt.registerTask 'init:wiki', ->
-    grunt.log.write('Cloning Wiki...');
+    grunt.log.write 'Cloning Wiki...'
     if grunt.file.exists wikiLocal
       grunt.file.delete wikiLocal
     grunt.task.run 'gitclone:wiki'
