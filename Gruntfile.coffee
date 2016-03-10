@@ -1,9 +1,9 @@
-wiki_repo = 'https://github.com/XDUBESLab/caffe-insight.wiki.git'
-wiki_local = 'caffe-insight-wiki'
-caffe_repo = 'https://github.com/BVLC/caffe.git'
-caffe_local = 'caffe'
-draft_local = 'draft'
-rendered_local = 'rendered'
+wikiRepo = 'https://github.com/XDUBESLab/caffe-insight.wiki.git'
+wikiLocal = 'caffe-insight-wiki'
+caffeRepo = 'https://github.com/BVLC/caffe.git'
+caffeLocal = 'caffe'
+draftLocal = 'draft'
+renderedLocal = 'rendered'
 
 fs = require 'fs'
 path = require 'path'
@@ -18,12 +18,12 @@ module.exports = (grunt) ->
     gitclone:
       wiki:
         options:
-          repository: wiki_repo
-          directory: wiki_local
+          repository: wikiRepo
+          directory: wikiLocal
       caffe:
         options:
-          repository: caffe_repo
-          directory: caffe_local
+          repository: caffeRepo
+          directory: caffeLocal
 
   grunt.registerTask 'usage', ->
     grunt.log.subhead 'Usage:\tgrunt [render | sync | test]'
@@ -36,16 +36,16 @@ module.exports = (grunt) ->
 
   grunt.registerTask 'init:caffe', ->
     grunt.log.write 'Loiking for Caffe...'
-    if !grunt.file.exists caffe_local
-      grunt.log.writeln 'Caffe not found. Cloning from #{caffe_repo}'
+    if !grunt.file.exists caffeLocal
+      grunt.log.writeln 'Caffe not found. Cloning from #{caffeRepo}'
       grunt.task.run 'gitclone:caffe'
     else
       grunt.log.ok
 
   grunt.registerTask 'init:wiki', ->
     grunt.log.write('Cloning Wiki...');
-    if grunt.file.exists wiki_local
-      grunt.file.delete wiki_local
+    if grunt.file.exists wikiLocal
+      grunt.file.delete wikiLocal
     grunt.task.run 'gitclone:wiki'
 
   grunt.registerTask 'init', ['init:caffe', 'init:wiki']
@@ -59,8 +59,8 @@ module.exports = (grunt) ->
     this.async
     render.getRender (err, render) ->
       grunt.log.writeln 'Rendering drafts...'
-      grunt.file.recurse draft_local, (src, rootdir, subdir, filename) ->
-        dest = path.join rendered_local, filename
+      grunt.file.recurse draftLocal, (src, rootdir, subdir, filename) ->
+        dest = path.join renderedLocal, filename
         render src, dest, (err, data) ->
           if err
             grunt.log.error err, data
