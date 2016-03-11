@@ -3,8 +3,10 @@ require 'coffee-script'
 fs = require 'fs'
 path = require 'path'
 render = require './src/render'
-analyze = require './src/analyzer'
+analyzer = require './src/analyzer.coffee'
 prettysize = require 'filesize'
+
+analyze = analyzer.analyze
 
 projectRoot = __dirname
 wikiRepo = 'https://github.com/XDUBESLab/caffe-insight.wiki.git'
@@ -52,14 +54,15 @@ module.exports = (grunt) ->
     grunt.task.run 'gitclone:wiki'
 
   grunt.registerTask 'init', ['init:caffe', 'init:wiki']
+
   grunt.registerTask 'index', ->
-    this.async
+    this.async()
     analyze (err, dbFilename) ->
       fileszie = fs.statSync(dbFilename).size
       grunt.log.ok '#{prettysize(fileszie)} (#{fileszie} Bytes) written.'
 
   grunt.registerTask 'render', ->
-    this.async
+    this.async()
     render.getRender (err, render) ->
       grunt.log.writeln 'Rendering drafts...'
       grunt.file.recurse draftLocal, (src, rootdir, subdir, filename) ->
