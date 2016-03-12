@@ -2,7 +2,7 @@ require 'coffee-script'
 
 fs = require 'fs'
 path = require 'path'
-render = require './src/render'
+render = require './src/render.coffee'
 analyzer = require './src/analyzer.coffee'
 prettysize = require 'filesize'
 
