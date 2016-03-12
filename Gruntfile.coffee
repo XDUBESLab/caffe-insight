@@ -70,8 +70,8 @@ module.exports = (grunt) ->
         render src, dest, (err, data) ->
           if err
             grunt.log.error err, data
-            grunt.log.error 'Cannot render: #{src}'
+            grunt.log.error "Cannot render: #{src}"
           else
-            grunt.log.ok 'Rendered: #{src}'
+            grunt.log.ok "Rendered: #{src}"
 
   grunt.registerTask 'default', 'usage'
