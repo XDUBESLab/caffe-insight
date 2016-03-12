@@ -59,7 +59,7 @@ module.exports = (grunt) ->
     this.async()
     analyze (err, dbFilename) ->
       fileszie = fs.statSync(dbFilename).size
-      grunt.log.ok '#{prettysize(fileszie)} (#{fileszie} Bytes) written.'
+      grunt.log.ok "#{prettysize(fileszie)} (#{fileszie} Bytes) written."
 
   grunt.registerTask 'render', ->
     this.async()
