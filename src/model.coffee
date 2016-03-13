@@ -2,10 +2,10 @@ _ = require 'underscore'
 
 many = (cls, arg) ->
   cons = (i) -> if arg then new cls i, arg else new cls i
-  (obj) -> if Array.isArray obj then obj.map cons else cons obj
+  (obj) -> if Array.isArray obj then obj.map cons else [cons obj]
 
 manyMap = (fn) -> (obj) ->
-  if Array.isArray obj then obj.map fn else fn obj
+  if Array.isArray obj then obj.map fn else [fn obj]
 
 any = (obj) ->
   if Array.isArray obj then obj else [obj]
