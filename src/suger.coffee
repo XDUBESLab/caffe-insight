@@ -1,4 +1,4 @@
-pr = require './pr'
+pr = require './pr.coffee'
 swig = require 'swig'
 
 sourceBase = 'https://github.com/BVLC/caffe/blob/master';

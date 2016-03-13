@@ -1,6 +1,6 @@
 _ = require 'underscore'
 fs = require 'fs'
-pr = require './pr'
+pr = require './pr.coffee'
 path = require 'path'
 async = require 'async'
 grunt = require 'grunt'
