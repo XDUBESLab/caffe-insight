@@ -39,7 +39,7 @@ class Member extends Indexable
     @fullname = "#{parent}#{Indexable.sep}#{def.name}"
     @access = attr.prot
     @static = attr.static is 'yes'
-    @mutable = attr.mutable
+    @mutable = attr.mutable is 'yes'
     @description = def.detaileddescription || def.briefdescription || null;
 
 class Compound extends Indexable
