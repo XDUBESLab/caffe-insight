@@ -12,7 +12,7 @@ any = (obj) ->
 
 class Indexable
   constructor: (@name, @refid, @kind) ->
-  sep: '::'
+  @sep: '::'
   slugs: => name.split sep
 
 mergeInclude = (i) -> _.extend (path: i['_']), i['$']
@@ -35,10 +35,12 @@ class Import extends Indexable
 class Member extends Indexable
   constructor: (def, parent) ->
     attr = def['$']
-    super "#{parent}::#{def.name}", def.refid, attr.kind
-    @prot = attr.prot
-    @static = attr.static
+    super def.name, def.refid, attr.kind
+    @fullname = "#{parent}#{Indexable.sep}#{def.name}"
+    @access = attr.prot
+    @static = attr.static is 'yes'
     @mutable = attr.mutable
+    @description = def.detaileddescription || def.briefdescription || null;
 
 class Compound extends Indexable
   constructor: (def) ->
@@ -48,9 +50,10 @@ class Compound extends Indexable
     @prot = attr.prot
     @location = def.location['$']
     @imports = (many Import) (def.imports || [])
-    members = {}
+    @description = def.detaileddescription || def.briefdescription || null;
+    members = []
     (any def.sectiondef).forEach (sec) ->
-      members[sec['$']['kind']] = (many Member, name) (sec.memberdef || [])
+      members = members.concat (many Member, name) (sec.memberdef || [])
     @members = members
 
 exports.File = File
