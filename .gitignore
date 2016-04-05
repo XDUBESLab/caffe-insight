@@ -170,10 +170,17 @@ $RECYCLE.BIN/
 caffe-insight-wiki/
 caffe/
 
-# Ignore some of WebStorm staff
-.idea/deployment.xml
-.idea/webServers.xml
-.idea/watcherTasks.xml
+# Ignore all of the WebStorm staff
+.idea/
 
 # Ignore DB files
 symbols.json
+
+# Ignore rendered MD
+rendered/
+
+# Ignore documents
+doc/
+
+# Ignore playground
+playground.coffee
