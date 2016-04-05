@@ -1,11 +1,11 @@
 _ = require 'underscore'
 fs = require 'fs'
-pr = require './pr.coffee'
+pr = require './pr'
 path = require 'path'
 async = require 'async'
 grunt = require 'grunt'
-model = require './model.coffee'
-parser = require './parser.coffee'
+model = require './model'
+parser = require './parser'
 
 xmlRoot = path.resolve 'caffe/doxygen/xml'
 
