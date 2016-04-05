@@ -42,7 +42,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'init:caffe', ->
     grunt.log.write 'Loiking for Caffe...'
     if !grunt.file.exists caffeLocal
-      grunt.log.writeln 'Caffe not found. Cloning from #{caffeRepo}'
+      grunt.log.writeln "Caffe not found. Cloning from #{caffeRepo}"
       grunt.task.run 'gitclone:caffe'
     else
       grunt.log.ok
