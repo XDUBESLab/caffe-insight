@@ -63,15 +63,12 @@ module.exports = (grunt) ->
 
   grunt.registerTask 'render', ->
     this.async()
-    render.getRender (err, render) ->
-      grunt.log.writeln 'Rendering drafts...'
-      grunt.file.recurse draftLocal, (src, rootdir, subdir, filename) ->
-        dest = path.join renderedLocal, filename
-        render src, dest, (err, data) ->
-          if err
-            grunt.log.error err, data
-            grunt.log.error "Cannot render: #{src}"
-          else
-            grunt.log.ok "Rendered: #{src}"
+    drafts = fs.readdirSync draftLocal
+    fileMap = {}
+    for draft in drafts
+      fileMap[path.join draftLocal, draft] = path.join renderedLocal, draft
+    render.render fileMap, (err, rendered) ->
+      for src, target of rendered
+        grunt.log.ok("Rendered: #{path.relative process.cwd(), src}")
 
   grunt.registerTask 'default', 'usage'
