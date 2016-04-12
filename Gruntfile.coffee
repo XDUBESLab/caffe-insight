@@ -14,7 +14,8 @@ caffeRepo = 'https://github.com/BVLC/caffe.git'
 wikiLocal = path.join projectRoot, 'caffe-insight-wiki'
 caffeLocal = path.join projectRoot, 'caffe'
 draftLocal = path.join projectRoot, 'draft'
-renderedLocal = path.join projectRoot, 'rendered'
+renderedLocal = path.join projectRoot, 'hexo/source/_post'
+hexoLocal = 'hexo'
 
 module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-git'
@@ -32,13 +33,21 @@ module.exports = (grunt) ->
           directory: caffeLocal
     hexo:
       clean:
-        cliCmd: 'clean'
+        options:
+          root: hexoLocal
+          cliCmd: 'clean'
       generate:
-        cliCmd: 'generate'
+        options:
+          root: hexoLocal
+          cliCmd: 'generate'
       deploy:
-        cliCmd: 'deploy'
+        options:
+          root: hexoLocal
+          cliCmd: 'deploy'
       server:
-        cliCmd: 'server'
+        options:
+          root: hexoLocal
+          cliCmd: 'server'
 
   grunt.registerTask 'usage', ->
     grunt.log.subhead 'Usage:\tgrunt [render | sync | test]'
@@ -73,6 +82,7 @@ module.exports = (grunt) ->
 
   grunt.registerTask 'render', ->
     this.async()
+    fs.ensureDirSync renderedLocal
     drafts = fs.readdirSync draftLocal
     fileMap = {}
     for draft in drafts
@@ -81,7 +91,8 @@ module.exports = (grunt) ->
       for src, target of rendered
         grunt.log.ok("Rendered: #{path.relative process.cwd(), src}")
 
-  grunt.registerTask 'generate', ['render', 'hexo:generate']
-  grunt.registerTask 'preview', ['generate', 'hexo:server']
+  grunt.registerTask 'r', 'render'
+  grunt.registerTask 'g', 'hexo:generate'
+  grunt.registerTask 's', 'hexo:server'
 
   grunt.registerTask 'default', 'usage'

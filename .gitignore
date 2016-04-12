@@ -187,5 +187,6 @@ doc/
 playground.coffee
 db.json
 *.log
-public/
-.deploy*/
+hexo/public/
+hexo/.deploy*/
+hexo/source/_post
