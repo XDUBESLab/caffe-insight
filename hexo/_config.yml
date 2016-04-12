@@ -3,11 +3,11 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: CaffeInsight
-subtitle:
-description: 说不定用得上的Caffe分析
+title: Caffe::Insight
+subtitle:    说不定有点什么用处的Caffe源码分析
+description: 说不定有点什么用处的Caffe源码分析
 author: Yufei Liu
-language: zh_CN
+language: zh-CN
 timezone: Asia/Shanghai
 
 # URL
@@ -70,4 +70,4 @@ theme: maupassant
 deploy:
   type: git
   repo: https://github.com/oopsno/caffe-insight.git
-  branch: gp-pages
+  branch: gh-pages
