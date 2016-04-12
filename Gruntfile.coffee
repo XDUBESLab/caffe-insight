@@ -14,7 +14,7 @@ caffeRepo = 'https://github.com/BVLC/caffe.git'
 wikiLocal = path.join projectRoot, 'caffe-insight-wiki'
 caffeLocal = path.join projectRoot, 'caffe'
 draftLocal = path.join projectRoot, 'draft'
-renderedLocal = path.join projectRoot, 'hexo/source/_post'
+renderedLocal = path.join projectRoot, 'hexo/source/_posts'
 hexoLocal = 'hexo'
 
 module.exports = (grunt) ->

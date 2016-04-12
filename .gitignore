@@ -189,4 +189,4 @@ db.json
 *.log
 hexo/public/
 hexo/.deploy*/
-hexo/source/_post
+hexo/source/_posts
