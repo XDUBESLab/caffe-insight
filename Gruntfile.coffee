@@ -1,6 +1,6 @@
 require 'coffee-script'
 
-fs = require 'fs'
+fs = require 'fs-extra'
 path = require 'path'
 render = require './src/render.coffee'
 analyzer = require './src/analyzer.coffee'
@@ -18,6 +18,7 @@ renderedLocal = path.join projectRoot, 'rendered'
 
 module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-git'
+  grunt.loadNpmTasks 'grunt-hexo'
   grunt.initConfig
     pkg: grunt.file.readJSON 'package.json'
     gitclone:
@@ -29,6 +30,15 @@ module.exports = (grunt) ->
         options:
           repository: caffeRepo
           directory: caffeLocal
+    hexo:
+      clean:
+        cliCmd: 'clean'
+      generate:
+        cliCmd: 'generate'
+      deploy:
+        cliCmd: 'deploy'
+      server:
+        cliCmd: 'server'
 
   grunt.registerTask 'usage', ->
     grunt.log.subhead 'Usage:\tgrunt [render | sync | test]'
@@ -70,5 +80,8 @@ module.exports = (grunt) ->
     render.render fileMap, (err, rendered) ->
       for src, target of rendered
         grunt.log.ok("Rendered: #{path.relative process.cwd(), src}")
+
+  grunt.registerTask 'generate', ['render', 'hexo:generate']
+  grunt.registerTask 'preview', ['generate', 'hexo:server']
 
   grunt.registerTask 'default', 'usage'

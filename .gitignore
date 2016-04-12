@@ -112,7 +112,8 @@ tags
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
@@ -184,3 +185,7 @@ doc/
 
 # Ignore playground
 playground.coffee
+db.json
+*.log
+public/
+.deploy*/
