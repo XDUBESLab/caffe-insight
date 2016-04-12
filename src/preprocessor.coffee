@@ -4,12 +4,11 @@
 
 # @nodoc
 fs = require 'fs'
-markdown = require('markdown').markdown
-htmlparser = require 'htmlparser'
+yaml = require 'yaml'
 
 # Un-Rendered MarkDown
 class URMD
-  constructor: (@references, content) ->
+  constructor: (content) ->
     # 末尾追加引用生成
     @content = "#{content}\n<!-- 自动生成的引用 -->\n{{ genReferences() }}"
   
@@ -17,7 +16,7 @@ class URMD
   # @param key   {String}
   # @param value {Object}
   set: (key, value)->
-    @[key] = value
+    @["$#{key}"] = value
 
 # 预处理Markdown, 读取首部注释内的键值列表
 # 
@@ -25,17 +24,11 @@ class URMD
 # @return {URMD}
 preprocess = (path) ->
   content = fs.readFileSync path, encoding: 'utf-8'
-  handler = new htmlparser.DefaultHandler (err, dom) ->
-  parser = new htmlparser.Parser handler
-  md = markdown.parse(content)
-  urmd = new URMD(md[1].references, content)
+  urmd = new URMD(content)
   try
-    parser.parseComplete md[2][1]
-    # TODO 更健壮的首部键值对解析
-    pairs = handler.dom[0].data.trim().split('\n')
-    for pair in pairs
-      [key, value] = pair.split(': ')
-      urmd.set key.trim().toLowerCase(), value.trim()
+    header = yaml.eval content.split('---')[0]
+    for key, value of header
+      urmd.set key, value
   catch err
   return urmd
 

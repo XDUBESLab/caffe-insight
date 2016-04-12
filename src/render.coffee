@@ -67,11 +67,13 @@ class RenderContextManager
     @contexts = {}
 
   # 获取RenderContext
-  # @param name {String} Context的名字 同名的Context会被复用以支持多趟编译
-  getContext: (name) ->
+  # @param name {URMD} Context的名字 同名的Context会被复用以支持多趟编译
+  getContext: (urmd) ->
+    name = urmd.$title || "anonymous"
     if not @contexts[name]
       ctx = new RenderContext @db, @
       u.extend(ctx, u.mapObject(ctx.__proto__, (value) -> value.bind(ctx)))
+      u.extend(ctx, urmd)
       @contexts[name] = ctx
     return @contexts[name]
 
@@ -94,12 +96,12 @@ render = (fileMap, callback) ->
     for src, target of fileMap
       urmd = preprocess src
       cache[src] = urmd
-      context = manager.getContext urmd.item
+      context = manager.getContext urmd
       swig.render urmd.content, context
     # 二次渲染
     for src, target of fileMap
       urmd = cache[src]
-      context = manager.getContext urmd.item
+      context = manager.getContext urmd
       md = swig.render urmd.content, locals: context
       fs.writeFileSync target, md
     return callback null, fileMap
