@@ -26,34 +26,44 @@ sourceRef = (entity) ->
 wikiRef = (entity) ->
   "#{wikiBase}/#{entity.location.file}#L#{entity.location.line}"
 
+# 生成符号表实体到对应的文件的Github链接
+# @param entity {Object} 符号对应的实体
+# @return {String}
+fileRef = (entity) ->
+  return "#{sourceBase}/#{entity.location.file}"
+
 # 渲染上下文
 class RenderContext
   constructor: (@db, @manager) ->
     @refs = {}
 
-  # 生成符号到Github上源码对应位置的链接
-  # @example 如何在Markdown + Swig中使用
-  # {{ srcLink("caffe::Layer") }}
-  # @param symbol {String} qualified name
+# 生成符号到Github上源码对应位置的链接
+# @example 如何在Markdown + Swig中使用
+# {{ srcLink("caffe::Layer") }}
+# @param symbol {String} qualified name
   srcLink: (symbol) ->
     e = @db.findOne name: symbol
+    ref = "`#{e.name}`"
     if e.location
-      @refs["`#{e.name}`"] = "#{sourceRef e}"
-      return "[`#{e.name}`]"
+      switch e.kind
+        when 'class' then @refs[ref] = "#{sourceRef e}"
+        when 'file'  then @refs[ref] = "#{fileRef e}"
+        else throw new TypeError "Cannot create srcLink on #{symbol}"
+      return "[#{ref}]"
     else
-      return "`#{e.name}`"
+      return ref
 
-  # 生成符号到Wiki上各个条目对应位置的链接
-  # @example 如何在Markdown + Swig中使用
-  # {{ wikiLink("caffe::Layer") }}
-  # @param symbol {String} qualified name
+# 生成符号到Wiki上各个条目对应位置的链接
+# @example 如何在Markdown + Swig中使用
+# {{ wikiLink("caffe::Layer") }}
+# @param symbol {String} qualified name
   wikiLink: (symbol) ->
     e = @db.findOne name: symbol
     if e.location
       "[`#{e.name}`](#{ e})"
     else "`#{e.name}`"
-      
-  # 生成所有引用
+
+# 生成所有引用
   genReferences: ->
     ref = ""
     for name, url of @refs
@@ -66,8 +76,8 @@ class RenderContextManager
   constructor: (@db) ->
     @contexts = {}
 
-  # 获取RenderContext
-  # @param name {URMD} Context的名字 同名的Context会被复用以支持多趟编译
+# 获取RenderContext
+# @param name {URMD} Context的名字 同名的Context会被复用以支持多趟编译
   getContext: (urmd) ->
     name = urmd.$title || "anonymous"
     if not @contexts[name]

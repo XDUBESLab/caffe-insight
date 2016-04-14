@@ -23,6 +23,7 @@ class File extends Indexable
     super doc.compoundname, attr.id, attr.kind
     @includes = (manyMap mergeInclude) (doc.includes || [])
     @includedBy = (manyMap mergeInclude) (doc.includedby || [])
+    @location = doc.location.$
 
 class Import extends Indexable
   constructor: (doc) ->
