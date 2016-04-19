@@ -34,9 +34,8 @@ fileRef = (entity) ->
 
 # 渲染错误
 class RenderError extends Error
-  constructor: (msg, context) ->
-    super(msg)
-    @captureStackTrace(context)
+  constructor: (@message) ->
+    Error.captureStackTrace(@)
 
 # 渲染上下文
 class RenderContext
@@ -50,7 +49,7 @@ class RenderContext
   srcLink: (symbol) ->
     e = @db.findOne name: symbol
     if e is null
-      throw new RenderError("Cannot find #{symbol}", this)
+      throw new RenderError "Cannot find symbol #{symbol}"
     ref = "`#{e.name}`"
     if e.location
       switch e.kind
@@ -68,7 +67,7 @@ class RenderContext
   wikiLink: (symbol) ->
     e = @db.findOne name: symbol
     if e is null
-      throw new RenderError("Cannot find #{symbol}", this)
+      throw new RenderError "Cannot find symbol #{symbol}"
     if e.location
       "[`#{e.name}`](#{ e})"
     else "`#{e.name}`"
