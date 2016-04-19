@@ -32,6 +32,12 @@ wikiRef = (entity) ->
 fileRef = (entity) ->
   return "#{sourceBase}/#{entity.location.file}"
 
+# 渲染错误
+class RenderError extends Error
+  constructor: (msg, context) ->
+    super(msg)
+    @captureStackTrace(context)
+
 # 渲染上下文
 class RenderContext
   constructor: (@db, @manager) ->
@@ -43,6 +49,8 @@ class RenderContext
 # @param symbol {String} qualified name
   srcLink: (symbol) ->
     e = @db.findOne name: symbol
+    if e is null
+      throw new RenderError("Cannot find #{symbol}", this)
     ref = "`#{e.name}`"
     if e.location
       switch e.kind
@@ -59,6 +67,8 @@ class RenderContext
 # @param symbol {String} qualified name
   wikiLink: (symbol) ->
     e = @db.findOne name: symbol
+    if e is null
+      throw new RenderError("Cannot find #{symbol}", this)
     if e.location
       "[`#{e.name}`](#{ e})"
     else "`#{e.name}`"
