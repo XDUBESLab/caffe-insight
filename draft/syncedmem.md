@@ -1,5 +1,4 @@
-title: Caffe的内存同步
-class: "caffe::SyncedMemory"
+title: caffe::SyncedMemory
 tags:
     - Caffe
     - BottomUp
