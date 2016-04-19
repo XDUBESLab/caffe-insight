@@ -116,7 +116,7 @@ render = (fileMap, callback) ->
         md = swig.render urmd.content, locals: context
         fs.writeFileSync target, md
     catch error
-      return callback error, null
+      return callback error, src
 
 # @nodoc
 exports.render = render

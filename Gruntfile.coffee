@@ -89,6 +89,7 @@ module.exports = (grunt) ->
       fileMap[path.join draftLocal, draft] = path.join renderedLocal, draft
     render.render fileMap, (err, rendered) ->
       if err
+        grunt.log.error("Cannot render #{rendered}")
         grunt.log.error(err.stack)
       else
         for src, target of rendered
