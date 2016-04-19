@@ -115,6 +115,7 @@ render = (fileMap, callback) ->
         context = manager.getContext urmd
         md = swig.render urmd.content, locals: context
         fs.writeFileSync target, md
+      return callback null, fileMap
     catch error
       return callback error, src
 

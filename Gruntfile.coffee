@@ -86,7 +86,11 @@ module.exports = (grunt) ->
     drafts = fs.readdirSync draftLocal
     fileMap = {}
     for draft in drafts
-      fileMap[path.join draftLocal, draft] = path.join renderedLocal, draft
+      if path.parse(draft).base.match(/\w+\.md$/)
+        fileMap[path.join draftLocal, draft] = path.join renderedLocal, draft
+        grunt.log.ok("Source found: #{draft}")
+      else
+        grunt.log.debug("Passing #{draft}...")
     render.render fileMap, (err, rendered) ->
       if err
         grunt.log.error("Cannot render #{rendered}")
