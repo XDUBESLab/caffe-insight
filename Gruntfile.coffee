@@ -88,8 +88,11 @@ module.exports = (grunt) ->
     for draft in drafts
       fileMap[path.join draftLocal, draft] = path.join renderedLocal, draft
     render.render fileMap, (err, rendered) ->
-      for src, target of rendered
-        grunt.log.ok("Rendered: #{path.relative process.cwd(), src}")
+      if err
+        grunt.log.error(err.stack)
+      else
+        for src, target of rendered
+          grunt.log.ok("Rendered: #{path.relative process.cwd(), src}")
 
   grunt.registerTask 'r', 'render'
   grunt.registerTask 'g', 'hexo:generate'
