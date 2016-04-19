@@ -78,5 +78,3 @@ layer {
 
 实现最简单的`std::PoolingLayer`是这种机制的一个特例。
 这个特例在方便用户定义Pooling层的同时也说明了Caffe的易拓展性。
-
-在{{ srcLink("caffe::UpgradeV0LayerParameter") }}函数
