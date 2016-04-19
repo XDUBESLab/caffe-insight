@@ -62,10 +62,11 @@ Caffe使用枚举类型`caffe::SyncedMemory::SyncedHead`状态每一个`caffe::S
 + `HEAD_AT_GPU`: GRAM持有最新副本
 + `SYNCED`: 已同步, 该状态**只会出现在GPU模式下**
 
-它们之间的状态迁移可以用这样一张图来描述：
+它们之间的状态迁移可以用这样一张图来描述，
+其中红色线条代表GRAM访问，蓝色线条代表RAM访问。
 
 {% raw %}
-{% graph dot "状态转移图 - GPU Mode" %}
+{% graphviz "状态转移图 - GPU Mode" %}
 digraph {
     node   [shape = doublecircle, label = "U"] u;
     node   [shape = circle, label = "@CPU"] c;
@@ -84,7 +85,7 @@ digraph {
 {% endraw %}
 
 {% raw %}
-{% graph dot "状态转移图 - CPU Mode" %}
+{% graphviz "状态转移图 - CPU Mode" %}
 digraph {
     node   [shape = doublecircle, label = "U"] u;
     node   [shape = circle, label = "@CPU"] c;
