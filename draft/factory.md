@@ -76,7 +76,7 @@ class LayerRegisterer {
   }
 };
 ```
-## 宏`REGISTER_LAYER_CREATOR`
+### 宏`REGISTER_LAYER_CREATOR`
 
 分别以`float`和`double`创建两个`static`实例，最终实现动态注册类。
 
@@ -111,16 +111,33 @@ std::shared_ptr<PoolingLayer<Dtype>> Creator_PoolingLayer(const LayerParameter &
 
 然后使用`REGISTER_LAYER_CREATOR`宏来特化并注册Creator函数，完成工厂方法的所有准备工作。
 
+### 注册
+
+以`caffe::FilterLayer`为例，这种工厂方法下的直接注册方法是
+
+```C++
+REGISTER_LAYER_CLASS(Filter)
+```
+
+另外一种间接使用这个工厂方法的例子集中在{{ fileLink("layer_factory.cpp") }}中。
+
+这里200+行代码的目的只有一个：为有特殊需求的Layer提供不同于`REGISTER_LAYER_CLASS`所创建的Creator。
+具体分两类：
++ 为支持选择`Engine`的，也就是可以选择使用cuDNN实现或者Caffe实现的层，提供支持
++ 为{{ srcLink("caffe::PythonLayer") }}准备Python运行时环境
+
+Stringification会产生`"Filter"`以便用于`.proto`，Concatenation会连缀`Filter`和`Layer`构造出类名`FilterLayer`。
+
 确实有些不那么直白。
-这里如果综合利用`std::function`（或者，C++03时代的`boost::function`）和编译器提供的`__attribute__((constructor))`功能，
+这里如果综合利用`std::function`（或者，前C++11时代的`boost::function`）和编译器提供的`__attribute__((constructor))`功能，
 几乎可以肯定最终能得到易懂的多的工厂方法实现。
 然而，相比于Caffe的主要任务，这些细枝末节，又何必费心太多呢:P
 
 ## 使用
 
-以Model Zoo中的LeNet的`pool1`为例
+以Model Zoo中的LeNet的`pool1`层为例
 
-```
+```yaml
 layer {
   name: "pool1"
   type: "Pooling"
@@ -136,8 +153,9 @@ layer {
 
 在每一层中显式指定Layer的类型即可。
 
-## 特例
+## Solver
 
-<!-- TODO -->
-实现最简单的`std::PoolingLayer`是这种机制的一个特例。
-这个特例在方便用户定义Pooling层的同时也说明了Caffe的易拓展性。
+为Solver设计的工厂方法和为Layer设计的工厂方法思路完全一致，
+而且没有特例，所以读起来更为简单。
+
+
