@@ -32,15 +32,22 @@ Caffe默认支持三种线性代数库，BLAS，OpenBlas 和 Intel MKL，
 对于买不起Intel MKL的团队，Caffe会设法通过BLAS模拟Caffe需要的 MKL additions，
 见于 {{ srcLink("mkl_alternate.hpp") }}。
 
-## CUDA
+## cuDNN支持
 
-或许是广泛商用之后的向前兼容问题使然，Caffe本身并及时跟进到CUDA 7.x，
-因此Caffe对CUDA的使用就只停留在了cuDNN上，并没有使用性能更好的cuBLAS和cuSOLVER。
-运行于GPU上的代码多是Caffe项目组手工编写的，如{{ srcLink("math_functions.cpp") }}。
+较新的Caffe为cuDNN开启了可选支持。
+目前支持cuDNN的Layer包括：
 
-## cuDNN
++ ConvolutionLayer
++ LCNLayer
++ LRNLayer
++ PoolingLayer
++ ReLULayer
++ SigmoidLayer
++ SoftmaxLayer
++ TanHLayer
 
-TODO
+你可在配置文件中通过`engine`选项手动开启或关闭`cuDNN`。
+如果不手动指明，Caffe会自动在cuDNN可用的情况下使用cuDNN。
 
 ## 编码风格
 
