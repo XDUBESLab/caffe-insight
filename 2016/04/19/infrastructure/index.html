@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="说不定有点什么用处的Caffe源码分析"><title>Caffe的基础设施 | Caffe::Insight</title><link rel="stylesheet" type="text/css" href="/caffe-insight/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/3.0.3/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/2.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/caffe-insight/favicon.ico"><link rel="apple-touch-icon" href="/caffe-insight/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/caffe-insight/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Caffe的基础设施</h1><a id="logo" href="/caffe-insight/.">Caffe::Insight</a><p class="description">说不定有点什么用处的Caffe源码分析</p></div><div id="nav-menu"><a href="/caffe-insight/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/caffe-insight/archives/"><i class="fa fa-archive"> 归档</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Caffe的基础设施</h1><div class="post-meta">Apr 19, 2016<script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2016/04/19/infrastructure/" href="/caffe-insight/2016/04/19/infrastructure/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>Caffe的基础设施：构建工具，依赖与编码风格</p>
+<a id="more"></a>
+<h2 id="构建工具"><a href="#构建工具" class="headerlink" title="构建工具"></a>构建工具</h2><h3 id="传统方案"><a href="#传统方案" class="headerlink" title="传统方案"></a>传统方案</h3><p>官方维护了Make，社区维护着CMake，但都没有给出完整的依赖配置方案。<br>构建环境需另行参考<a href="http://caffe.berkeleyvision.org/installation.html" target="_blank" rel="external">Caffe | Installation</a></p>
+<h3 id="使用Docker"><a href="#使用Docker" class="headerlink" title="使用Docker"></a>使用Docker</h3><p>在社区支持下，可以很方便的以Docker搭建Caffe环境。</p>
+<ul>
+<li>CPU版本: <code>docker pull kaixhin/caffe</code></li>
+<li>GPU版本: <code>docker pull kaixhin/cuda-caffe</code></li>
+</ul>
+<p>更多镜像请往<a href="https://hub.docker.com/search/?isAutomated=0&amp;isOfficial=0&amp;page=1&amp;pullCount=0&amp;q=caffe&amp;starCount=0" target="_blank" rel="external">Docker Hub</a></p>
+<h2 id="线性代数"><a href="#线性代数" class="headerlink" title="线性代数"></a>线性代数</h2><p>Caffe默认支持三种线性代数库，BLAS，OpenBlas 和 Intel MKL，<br>可以通过<code>Makefile。config</code>进行配置。</p>
+<p>对于买不起Intel MKL的团队，Caffe会设法通过BLAS模拟Caffe需要的 MKL additions，<br>见于 <a href="https://github.com/BVLC/caffe/blob/master/include/caffe/util/mkl_alternate.hpp" target="_blank" rel="external"><code>mkl_alternate.hpp</code></a>。</p>
+<h2 id="cuDNN支持"><a href="#cuDNN支持" class="headerlink" title="cuDNN支持"></a>cuDNN支持</h2><p>较新的Caffe为cuDNN开启了可选支持。<br>目前支持cuDNN的Layer包括：</p>
+<ul>
+<li>ConvolutionLayer</li>
+<li>LCNLayer</li>
+<li>LRNLayer</li>
+<li>PoolingLayer</li>
+<li>ReLULayer</li>
+<li>SigmoidLayer</li>
+<li>SoftmaxLayer</li>
+<li>TanHLayer</li>
+</ul>
+<p>你可在配置文件中通过<code>engine</code>选项手动开启或关闭<code>cuDNN</code>。<br>如果不手动指明，Caffe会自动在cuDNN可用的情况下使用cuDNN。</p>
+<h2 id="编码风格"><a href="#编码风格" class="headerlink" title="编码风格"></a>编码风格</h2><p>Caffe大量的混用了模板和宏，但整体的原则是：</p>
+<ul>
+<li>所有类模板只有一个类型模板参数</li>
+<li>类模板之所以存在，只是为了同时支持</li>
+</ul>
+<h3 id="工具函数"><a href="#工具函数" class="headerlink" title="工具函数"></a>工具函数</h3><p>Caffe在BLAS/OpenBlas/MKL Blas的基础上做了一个微型的兼容层，<br>其主要目的是</p>
+<ul>
+<li>以函数模板的形式统一不同精度的浮点数的函数，如<code>vdSub</code>和<code>vsSub</code>被统一成了<code>caffe::caffe_sub&lt;Dtype&gt;</code></li>
+<li>模拟MKL的专有函数</li>
+</ul>
+<h3 id="类"><a href="#类" class="headerlink" title="类"></a>类</h3><p>类模板及其成员函数模板定义于<code>.hpp</code>，成员函数模板实现于<code>.cpp</code>。<br><code>.cpp</code>尾部给出该类模板的所有可用的特化版本。没有显式方法阻止用户以不被支持的类型模板参数特化一个类模板，<br>但这样做通常会导致在递归地特化该模板类所引用的函数模板时因找不到对应的特化版本而失败。</p>
+<!-- 自动生成的引用 -->
+</div><script type="text/javascript" src="/caffe-insight/js/share.js?v=0.0.0" async></script><a data-url="https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/infrastructure/" data-id="cin9m3dsm00017uu3yi4rqjko" class="article-share-link">分享到</a><div class="tags"><a href="/caffe-insight/tags/Caffe/">Caffe</a><a href="/caffe-insight/tags/BottomUp/">BottomUp</a></div><div class="post-nav"><a href="/caffe-insight/2016/04/19/blob/" class="pre">caffe::Blob</a><a href="/caffe-insight/2016/04/19/overview/" class="next">Overview</a></div><div id="disqus_thread"><script>var disqus_shortname = 'nwiz';
+var disqus_identifier = '2016/04/19/infrastructure/';
+var disqus_title = 'Caffe的基础设施';
+var disqus_url = 'https://oopsno.github.io/caffe-insight/2016/04/19/infrastructure/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//nwiz.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4"><div id="sidebar"><div class="widget"><div class="search-form"><input id="local-search-input" placeholder="Search" type="text" name="q" results="0"/><div id="local-search-result"></div></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/caffe-insight/tags/Caffe/" style="font-size: 15px;">Caffe</a> <a href="/caffe-insight/tags/BottomUp/" style="font-size: 15px;">BottomUp</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/factory/">Layer和Solver中的工厂模式</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/layer/">caffe::Layer</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/blob/">caffe::Blob</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/infrastructure/">Caffe的基础设施</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/overview/">Overview</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/syncedmem/">caffe::SyncedMemory</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><script type="text/javascript" src="//nwiz.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://caffe.berkeleyvision.org" title="Caffe Official" target="_blank">Caffe Official</a><ul></ul><a href="https://www.github.com/BVLC/caffe" title="Caffe Repo" target="_blank">Caffe Repo</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/caffe-insight/." rel="nofollow">Caffe::Insight.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/caffe-insight/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/caffe-insight/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="/caffe-insight/css/jquery.fancybox.css?v=0.0.0"><script type="text/javascript" src="/caffe-insight/js/search.js?v=0.0.0"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+   search_path = 'search.xml';
+}
+var path = '/caffe-insight/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script type="text/javascript" src="/caffe-insight/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/caffe-insight/js/smartresize.js?v=0.0.0"></script></div></body></html>

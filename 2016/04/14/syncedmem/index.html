@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="说不定有点什么用处的Caffe源码分析"><title>Caffe的内存同步 | Caffe::Insight</title><link rel="stylesheet" type="text/css" href="/caffe-insight/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/3.0.3/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/0.6.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/2.2.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/caffe-insight/favicon.ico"><link rel="apple-touch-icon" href="/caffe-insight/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/caffe-insight/apple-touch-icon.png"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Caffe的内存同步</h1><a id="logo" href="/caffe-insight/.">Caffe::Insight</a><p class="description">说不定有点什么用处的Caffe源码分析</p></div><div id="nav-menu"><a href="/caffe-insight/." class="current"><i class="fa fa-home"> 首页</i></a><a href="/caffe-insight/archives/"><i class="fa fa-archive"> 归档</i></a></div></div><div id="layout" class="pure-g"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Caffe的内存同步</h1><div class="post-meta">Apr 14, 2016<script src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js" async></script><span id="busuanzi_container_page_pv"> | <span id="busuanzi_value_page_pv"></span><span> Hits</span></span></div><a data-disqus-identifier="2016/04/14/syncedmem/" href="/caffe-insight/2016/04/14/syncedmem/#disqus_thread" class="disqus-comment-count"></a><div class="post-content"><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>caffe::SycnedMemnoy: RAM与GRAM之间的同步解决方案</p>
+<a id="more"></a>
+<h2 id="依赖关系"><a href="#依赖关系" class="headerlink" title="依赖关系"></a>依赖关系</h2><p><code>caffe::SycnedMemnoy</code> 依赖标准库和CUDA Tool Kit，有Boost库的依赖，<br>但是所使用的<code>boost::shared_ptr</code>已随C++11标准纳入标准库，可取而代之。</p>
+<p><code>caffe::SycnedMemnoy</code> 仅仅被 <code>caffe::Blob</code> 和 <code>caffe::Filter</code> 依赖.</p>
+<h2 id="策略"><a href="#策略" class="headerlink" title="策略"></a>策略</h2><p><code>caffe::SycnedMemnoy</code> 是Caffe用来管理内存的基本组件。Caffe以这样的策略力图实现内存安全：</p>
+<ul>
+<li>多线程仅用于IO</li>
+<li>确保<code>caffe::SycnedMemnoy</code>实现可靠</li>
+<li>运行时使用的内存均直接或间接的由智能指针（<code>boost::shared_ptr</code>）管理</li>
+</ul>
+<p><code>caffe::SycnedMemnoy</code> 的整体策略是<strong>尽可能推迟一切操作</strong>，<br>真正的内存申请发生于第一次内存访问时而不是对象创建时；<br>内存同步发生于下一次内存访问前而不是每一次内存更改后。</p>
+<p>但是这样的设计也使得在用于代码中直接使用<code>caffe::SycnedMemnoy</code>需要格外小心：<br>除非明确知晓你在做什么，否则永远不要缓存从<code>caffe::SycnedMemnoy</code>对象获得的内存地址。</p>
+<h1 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h1><p><code>caffe::SyncedMemory</code> 主要控制内存的申请和释放，不关心内存的具体用途。<br>在初始化时会同时在RAM和GRAM（如果启用GPU）中申请指定大小的内存。</p>
+<p><code>caffe::SyncedMemory</code> 有6个用于暴露/重置原始内存的方法:</p>
+<ul>
+<li><code>{set,mutable}_{cpu,gpu}_data()</code></li>
+<li><code>{cpu,gpu}_data()</code></li>
+</ul>
+<p><code>caffe::SyncedMemory</code> 有2个用于显式同步内存的方法：</p>
+<ul>
+<li><code>to_gpu()</code></li>
+<li><code>to_cpu()</code></li>
+</ul>
+<p>此外，另有一个用于向GRAM异步推送数据的方法，<br><code>caffe::SyncedMemory::async_gpu_push</code>，<br>存在于，<br>但是从未被引用。</p>
+<p><code>caffe::SyncedMemory</code> 会在上面罗列的6个暴露真实地址的方法返回之前调用适当的同步方法，<br>以保证每次访问时内存时，RAM和GRAM中的内容是同步的。</p>
+<p>Caffe使用枚举类型<code>caffe::SyncedMemory::SyncedHead</code>状态每一个<code>caffe::SyncedMemory</code><br>对象的内部状态</p>
+<ul>
+<li><code>UNINITIALIZED</code>: 对象构造完成之后的的初始状态</li>
+<li><code>HEAD_AT_CPU</code>: RAM持有最新副本</li>
+<li><code>HEAD_AT_GPU</code>: GRAM持有最新副本</li>
+<li><code>SYNCED</code>: 已同步, 该状态<strong>只会出现在GPU模式下</strong></li>
+</ul>
+<p>它们之间的状态迁移可以用这样一张图来描述：</p>
+<div class="figure">
+  <img alt="状态转移图 - GPU Mode" src="fa9ea320a6f009b5208b7e7e3d334e53d09f0dc0.png">
+  <p class="caption">状态转移图 - GPU Mode</p>
+</div>
+
+<div class="figure">
+  <img alt="状态转移图 - CPU Mode" src="d16b7b4443880060cffc289d2539a61bacffc931.png">
+  <p class="caption">状态转移图 - CPU Mode</p>
+</div>
+
+<!-- 自动生成的引用 -->
+</div><script type="text/javascript" src="/caffe-insight/js/share.js?v=0.0.0" async></script><a data-url="https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/14/syncedmem/" data-id="cin6u4ita0006g0fy1kdojcgp" class="article-share-link">分享到</a><div class="tags"><a href="/caffe-insight/tags/Caffe/">Caffe</a><a href="/caffe-insight/tags/BottomUp/">BottomUp</a></div><div class="post-nav"><a href="/caffe-insight/2016/04/19/overview/" class="pre">Overview</a><a href="/caffe-insight/2016/04/14/infrastructure/" class="next">Caffe的基础设施</a></div><div id="disqus_thread"><script>var disqus_shortname = 'nwiz';
+var disqus_identifier = '2016/04/14/syncedmem/';
+var disqus_title = 'Caffe的内存同步';
+var disqus_url = 'https://oopsno.github.io/caffe-insight/2016/04/14/syncedmem/';
+(function() {
+  var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//nwiz.disqus.com/count.js" async></script></div></div></div></div><div class="pure-u-1-4"><div id="sidebar"><div class="widget"><div class="search-form"><input id="local-search-input" placeholder="Search" type="text" name="q" results="0"/><div id="local-search-result"></div></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/caffe-insight/tags/Caffe/" style="font-size: 15px;">Caffe</a> <a href="/caffe-insight/tags/BottomUp/" style="font-size: 15px;">BottomUp</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最新文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/blob/">caffe::Blob</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/19/overview/">Overview</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/14/syncedmem/">Caffe的内存同步</a></li><li class="post-list-item"><a class="post-list-link" href="/caffe-insight/2016/04/14/infrastructure/">Caffe的基础设施</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><script type="text/javascript" src="//nwiz.disqus.com/recent_comments_widget.js?num_items=5&amp;hide_avatars=1&amp;avatar_size=32&amp;excerpt_length=20&amp;hide_mods=1"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 友情链接</i></div><ul></ul><a href="http://caffe.berkeleyvision.org" title="Caffe Official" target="_blank">Caffe Official</a><ul></ul><a href="https://www.github.com/BVLC/caffe" title="Caffe Repo" target="_blank">Caffe Repo</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">© <a href="/caffe-insight/." rel="nofollow">Caffe::Insight.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a id="rocket" href="#top" class="show"></a><script type="text/javascript" src="/caffe-insight/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.pack.js" async></script><script type="text/javascript" src="/caffe-insight/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="/caffe-insight/css/jquery.fancybox.css?v=0.0.0"><script type="text/javascript" src="/caffe-insight/js/search.js?v=0.0.0"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+   search_path = 'search.xml';
+}
+var path = '/caffe-insight/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script type="text/javascript" src="/caffe-insight/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/caffe-insight/js/smartresize.js?v=0.0.0"></script></div></body></html>

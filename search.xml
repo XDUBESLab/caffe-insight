@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  
+  
+    
+    <entry>
+      <title><![CDATA[Layer和Solver中的工厂模式]]></title>
+      <url>https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/factory/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>Caffe中的诸多Solver和Layer是通过工厂方法的模式来控制实例化的。</p>
+<a id="more"></a>
+<p>由于Layer和Solver的工厂方法的实现原理相同，这里以相对更典型也更复杂的<code>caffe::LayerRegistry</code>为例进行分析。</p>
+<p>这种方法的核心思想是为每种Layer的具体实现的类注册一个名字，<br>由它记录名字到构造函数的映射关系；<br>在描述网络的<code>.proto</code>文件中为每个Layer指定<code>type</code>属性，<br>用以检索对应的构造函数。<br><!-- 或者赋予独有的属性值（如是一个全局的`std::map<std::string, Constructor>`对象， --></p>
+<h2 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h2><p>开发团队在中引入了一些类和宏来实现这样的工厂方法。<br>这个方法的核心思想是在一个<code>std::map</code>中记录名字到能构造对应的类的函数的对应关系，<br>这里姑且称之为『注册表』。</p>
+<p>实现这样的工厂方法机制主要依靠了语言和工具链的两项特性：</p>
+<ul>
+<li>C++中static storage duration的对象在程序加载后、main执行前构建并初始化。</li>
+<li>预处理器（宏）的符号拼接(Concatenation)和字符串化(Stringification)</li>
+</ul>
+<h3 id="Creator"><a href="#Creator" class="headerlink" title="Creator"></a><code>Creator</code></h3><p>Creator是这样一个类型别名：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="built_in">shared_ptr</span>&lt;Layer&lt;Dtype&gt;&gt; (*Creator)(<span class="keyword">const</span> LayerParameter &amp;)</span><br></pre></td></tr></table></figure>
+<p>也就是指向<strong>构造并返回一个Layer对象的共享指针的函数</strong>的指针。</p>
+<h3 id="LayerRegistry"><a href="#LayerRegistry" class="headerlink" title="LayerRegistry"></a><code>LayerRegistry</code></h3><p>Layer的注册表, 维护一个<code>std::map&lt;std::string, caffe::Creator&gt;</code>以记录名字和Creator的对应关系。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Dtype&gt;</span><br><span class="line"><span class="keyword">class</span> LayerRegistry &#123; <span class="comment">// 所有成员都被static修饰，这个class等同于一个namespace</span></span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  <span class="keyword">typedef</span> <span class="built_in">shared_ptr</span>&lt;Layer&lt;Dtype&gt;&gt; (*Creator)(<span class="keyword">const</span> LayerParameter &amp;);</span><br><span class="line">  <span class="keyword">typedef</span> <span class="built_in">std</span>::<span class="built_in">map</span>&lt;<span class="built_in">string</span>, Creator&gt; CreatorRegistry;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// static storage duration 保证这个map在程序开始运行时、main执行前被构造，并且仅存在一个实例</span></span><br><span class="line">  <span class="function"><span class="keyword">static</span> CreatorRegistry &amp;<span class="title">Registry</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">static</span> CreatorRegistry *g_registry_ = new CreatorRegistry();</span><br><span class="line">    return *g_registry_;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">AddCreator</span><span class="params">(<span class="keyword">const</span> <span class="built_in">string</span> &amp;type, Creator creator)</span> </span>&#123;</span><br><span class="line">    CreatorRegistry &amp;registry = Registry();</span><br><span class="line">    CHECK_EQ(registry.count(type), <span class="number">0</span>) &lt;&lt; <span class="string">"Layer type "</span> &lt;&lt; type &lt;&lt; <span class="string">" already registered."</span>;</span><br><span class="line">    registry[type] = creator;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="LayerRegisterer"><a href="#LayerRegisterer" class="headerlink" title="LayerRegisterer"></a><code>LayerRegisterer</code></h3><p>利用自己的构造函数在<code>main()</code>运行前向注册表注册类。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Dtype&gt;</span><br><span class="line"><span class="keyword">class</span> LayerRegisterer &#123;</span><br><span class="line"> <span class="keyword">public</span>:</span><br><span class="line">  LayerRegisterer(<span class="keyword">const</span> <span class="built_in">string</span> &amp;type, <span class="built_in">shared_ptr</span>&lt;Layer&lt;Dtype&gt; &gt; (*creator)(const LayerParameter &amp;)) &#123;</span><br><span class="line">    <span class="comment">// 这里的creator只是特化之后函数，如Creator_PoolingLayer&lt;double&gt;</span></span><br><span class="line">    LayerRegistry&lt;Dtype&gt;::AddCreator(type, creator);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="宏REGISTER-LAYER-CREATOR"><a href="#宏REGISTER-LAYER-CREATOR" class="headerlink" title="宏REGISTER_LAYER_CREATOR"></a>宏<code>REGISTER_LAYER_CREATOR</code></h3><p>分别以<code>float</code>和<code>double</code>创建两个<code>static</code>实例，最终实现动态注册类。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REGISTER_LAYER_CREATOR(type, creator)                                  \</span><br><span class="line">  static LayerRegisterer&lt;float&gt; g_creator_f_##type(#type, creator&lt;float&gt;);     \</span><br><span class="line">  static LayerRegisterer&lt;double&gt; g_creator_d_##type(#type, creator&lt;double&gt;)    \</span></span><br></pre></td></tr></table></figure>
+<h3 id="宏REGISTER-LAYER-CLASS"><a href="#宏REGISTER-LAYER-CLASS" class="headerlink" title="宏REGISTER_LAYER_CLASS"></a>宏<code>REGISTER_LAYER_CLASS</code></h3><p>这个宏用来为每个类生成Creator函数。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REGISTER_LAYER_CLASS(type)                                             \</span><br><span class="line">  template &lt;typename Dtype&gt;                                                    \</span><br><span class="line">  shared_ptr&lt;Layer&lt;Dtype&gt; &gt; Creator_##type##Layer(const LayerParameter&amp; param) \</span><br><span class="line">  &#123;                                                                            \</span><br><span class="line">    return shared_ptr&lt;Layer&lt;Dtype&gt; &gt;(new type##Layer&lt;Dtype&gt;(param));           \</span><br><span class="line">  &#125;                                                                            \</span><br><span class="line">  REGISTER_LAYER_CREATOR(type, Creator_##type##Layer)</span></span><br></pre></td></tr></table></figure>
+<p>在完全展开之后得到类似这样的函数模板（以PoolingLayer为例）：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Dtype&gt;</span><br><span class="line"><span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;PoolingLayer&lt;Dtype&gt;&gt; Creator_PoolingLayer(<span class="keyword">const</span> LayerParameter &amp;param) &#123;</span><br><span class="line">  return <span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;PoolingLayer&lt;Dtype&gt;&gt;(new PoolingLayer&lt;Dtype&gt;(param));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后使用<code>REGISTER_LAYER_CREATOR</code>宏来特化并注册Creator函数，完成工厂方法的所有准备工作。</p>
+<h3 id="注册"><a href="#注册" class="headerlink" title="注册"></a>注册</h3><p>以<code>caffe::FilterLayer</code>为例，这种工厂方法下的直接注册方法是</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">REGISTER_LAYER_CLASS(Filter)</span><br></pre></td></tr></table></figure>
+<p>另外一种间接使用这个工厂方法的例子集中在中。</p>
+<p>这里200+行代码的目的只有一个：为有特殊需求的Layer提供不同于<code>REGISTER_LAYER_CLASS</code>所创建的Creator。<br>具体分两类：</p>
+<ul>
+<li>为支持选择<code>Engine</code>的，也就是可以选择使用cuDNN实现或者Caffe实现的层，提供支持</li>
+<li>为<a href="https://github.com/BVLC/caffe/blob/master/include/caffe/layers/python_layer.hpp#L14" target="_blank" rel="external"><code>caffe::PythonLayer</code></a>准备Python运行时环境</li>
+</ul>
+<p>Stringification会产生<code>&quot;Filter&quot;</code>以便用于<code>.proto</code>，Concatenation会连缀<code>Filter</code>和<code>Layer</code>构造出类名<code>FilterLayer</code>。</p>
+<p>确实有些不那么直白。<br>这里如果综合利用<code>std::function</code>（或者，前C++11时代的<code>boost::function</code>）和编译器提供的<code>__attribute__((constructor))</code>功能，<br>几乎可以肯定最终能得到易懂的多的工厂方法实现。<br>然而，相比于Caffe的主要任务，这些细枝末节，又何必费心太多呢:P</p>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>以Model Zoo中的LeNet的<code>pool1</code>层为例</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">layer &#123;</span><br><span class="line"><span class="attr">  name:</span> <span class="string">"pool1"</span></span><br><span class="line"><span class="attr">  type:</span> <span class="string">"Pooling"</span></span><br><span class="line"><span class="attr">  bottom:</span> <span class="string">"conv1"</span></span><br><span class="line"><span class="attr">  top:</span> <span class="string">"pool1"</span></span><br><span class="line">  pooling_param &#123;</span><br><span class="line"><span class="attr">    pool:</span> MAX</span><br><span class="line"><span class="attr">    kernel_size:</span> <span class="number">2</span></span><br><span class="line"><span class="attr">    stride:</span> <span class="number">2</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在每一层中显式指定Layer的类型即可。</p>
+<h2 id="Solver"><a href="#Solver" class="headerlink" title="Solver"></a>Solver</h2><p>为Solver设计的工厂方法和为Layer设计的工厂方法思路完全一致，<br>而且没有特例，所以读起来更为简单。</p>
+<!-- 自动生成的引用 -->
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[caffe::Layer]]></title>
+      <url>https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/layer/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>Caffe中最基本的计算单元的统一抽象。</p>
+<a id="more"></a>
+<p><code>caffe::Layer</code>的派生类的主要作用的是</p>
+<ul>
+<li>向<code>caffe::Net</code>提供抽象的计算方法</li>
+<li>在作为参数传入的<code>bottom</code>和<code>top</code>上执行具体计算</li>
+</ul>
+<h2 id="抽象"><a href="#抽象" class="headerlink" title="抽象"></a>抽象</h2><p>caffe::Layer的主要目标是完成从具体计算任务到抽象的计算单元的抽象。<br>它对用户隐藏具体算法的实现，向<code>caffe::Net</code>提供处理计算和反向传播的统一接口。</p>
+<h2 id="构造与初始化"><a href="#构造与初始化" class="headerlink" title="构造与初始化"></a>构造与初始化</h2><p><code>caffe::Layer</code>仅仅提供了一个不可重载的构造函数，<br>它接受一个<code>caffe::LayerParameter</code>实例的引用，来从proto文件构建一个新的实例。</p>
+<p><code>caffe::Layer</code>使用了典型的两段初始化策略：</p>
+<p><code>caffe::Layer</code>主要向<code>caffe::Net</code>暴露了三个方法用以统一所有Layers的对外接口：</p>
+<ul>
+<li><code>ToProto</code>: 序列化</li>
+<li><code>SetUp</code>: 初始化完整的逻辑</li>
+<li><code>Forward</code>&amp;<code>Backword</code>: 计算的抽象方法 </li>
+<li><code>Reshape</code>: 调整top的维度</li>
+</ul>
+<blockquote>
+<p>Layers must implement a Forward function, in which they take their input<br>(bottom) Blobs (if any) and compute their output Blobs (if any).<br>They may also implement a Backward function, in which they compute the error<br>gradients with respect to their input Blobs, given the error gradients with<br>their output Blobs.</p>
+</blockquote>
+<p>每个继承<code>caffe::Layer</code>以实现特定Layer的类最终必须实现以下函数：</p>
+<ul>
+<li><code>Forward_(cpu|gpu)</code>: 执行计算</li>
+<li><code>Backward_(cpu|gpu)</code>: 执行反向传播</li>
+<li><code>LayerSetUp</code>: 执行当前Layer的初始化操作</li>
+<li><code>Reshape</code>: 调整top的维度</li>
+</ul>
+<h2 id="计算的实现"><a href="#计算的实现" class="headerlink" title="计算的实现"></a>计算的实现</h2><p>每类Layer最核心的计算任务是由<code>Forward</code>和<code>Backward</code>根据用户选择的计算模式路由到<br><code>Forward_(cpu|gpu)</code>和<code>Backward_(cpu|gpu)</code>上的。</p>
+<h2 id="反向传播的实现"><a href="#反向传播的实现" class="headerlink" title="反向传播的实现"></a>反向传播的实现</h2><h2 id="剩余事项"><a href="#剩余事项" class="headerlink" title="剩余事项"></a>剩余事项</h2><!-- 自动生成的引用 -->
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[caffe::Blob]]></title>
+      <url>https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/blob/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p><a href="https://github.com/BVLC/caffe/blob/master/include/caffe/blob.hpp#L24" target="_blank" rel="external"><code>caffe::Blob</code></a>是caffe中最基础的可计算数据单元，可以用于存储最高4个维度数的数据。</p>
+<a id="more"></a>
+<h2 id="存储结构"><a href="#存储结构" class="headerlink" title="存储结构"></a>存储结构</h2><p><code>caffe::Blob</code>是在<a href="https://github.com/BVLC/caffe/blob/master/include/caffe/syncedmem.hpp#L45" target="_blank" rel="external"><code>caffe::SyncedMemory</code></a>的基础之上构建的结构。<br>它本身不对所存储的数据格式做任何假设，主要的数据操纵工作都是通过向BLAS暴露内存实现的。</p>
+<h2 id="主要方法"><a href="#主要方法" class="headerlink" title="主要方法"></a>主要方法</h2><p><code>caffe::Blob</code>向外暴露的主要方法包括：</p>
+<ul>
+<li><code>Blob</code>: 构造函数，核心依赖于<code>Reshape</code></li>
+<li><code>Reshape</code>: 根据给定的维度数，<strong>执行内容无关的空间调整</strong>，且仅仅在空间不足时重新分配，不缩减已分配的空间</li>
+<li><code>(mutable_|set)?(cpu|gpu)_(data|diff)</code>: 底层数据访问，返回值的类型是<code>Dtype*</code>或者<code>const Dtype*</code>，</li>
+<li><code>(asum|sumsq|scale)_(data|diff)</code>: 稍高级的抽象，通过BLAS对<code>data</code>或者<code>diff</code>进行数值操作</li>
+<li>Update: 执行 <span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>d</mi><mi>a</mi><mi>t</mi><mi>a</mi><mo>←</mo><mi>d</mi><mi>a</mi><mi>t</mi><mi>a</mi><mo>−</mo><mi>d</mi><mi>i</mi><mi>f</mi><mi>f</mi></mrow><annotation encoding="application/x-tex">data \leftarrow data - diff </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="strut" style="height:0.69444em;"></span><span class="strut bottom" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="base displaystyle textstyle uncramped"><span class="mord mathit">d</span><span class="mord mathit">a</span><span class="mord mathit">t</span><span class="mord mathit">a</span><span class="mrel">←</span><span class="mord mathit">d</span><span class="mord mathit">a</span><span class="mord mathit">t</span><span class="mord mathit">a</span><span class="mbin">−</span><span class="mord mathit">d</span><span class="mord mathit">i</span><span class="mord mathit" style="margin-right:0.10764em;">f</span><span class="mord mathit" style="margin-right:0.10764em;">f</span></span></span></span></span>以更新Blob</li>
+<li>ToProto: 序列化到Protocol Buffers</li>
+<li>FromProto: 从Protocol Buffers反序列化到<code>caffe::Blob</code>对象</li>
+</ul>
+<h2 id="序列化与反序列化"><a href="#序列化与反序列化" class="headerlink" title="序列化与反序列化"></a>序列化与反序列化</h2><p>序列化与反序列化操作均通过Google Protocol Buffers实现。<br><code>caffe::Blob::ToProto</code>方法会逐个元素地将整个对象写入文件。 <code>caffe::Blob::FromProto</code>方法会逐个元素地将元素从Protocol Buffers拷贝到<code>caffe::Blob</code>。</p>
+<h2 id="空间复杂度"><a href="#空间复杂度" class="headerlink" title="空间复杂度"></a>空间复杂度</h2><p>由于每个Blob对象需要存储<code>data</code>，<code>diff</code>两部分数据，所以一个独立的Blob对象需要的空间开销是</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mn>2</mn><mo>(</mo><msub><mo>∏</mo><mrow><mi>d</mi><mi>i</mi><mi>m</mi><mrow><mo>∈</mo></mrow><mi>s</mi><mi>h</mi><mi>a</mi><mi>p</mi><mi>e</mi></mrow></msub><mi>d</mi><mi>i</mi><mi>m</mi><mo>)</mo><mi>s</mi><mi>i</mi><mi>z</mi><mi>e</mi><mi>o</mi><mi>f</mi><mo>(</mo><mi>D</mi><mi>t</mi><mi>y</mi><mi>p</mi><mi>e</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">2(\prod_{dim{\in}shape}dim)sizeof(Dtype)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="strut" style="height:1.050005em;"></span><span class="strut bottom" style="height:2.488226em;vertical-align:-1.438221em;"></span><span class="base displaystyle textstyle uncramped"><span class="mord mathrm">2</span><span class="mopen">(</span><span class="mop op-limits"><span class="vlist"><span style="top:1.202113em;margin-left:0em;"><span class="fontsize-ensurer reset-size5 size5"><span style="font-size:0em;">​</span></span><span class="reset-textstyle scriptstyle cramped"><span class="mord scriptstyle cramped"><span class="mord mathit">d</span><span class="mord mathit">i</span><span class="mord mathit">m</span><span class="mord scriptstyle cramped"><span class="mrel">∈</span></span><span class="mord mathit">s</span><span class="mord mathit">h</span><span class="mord mathit">a</span><span class="mord mathit">p</span><span class="mord mathit">e</span></span></span></span><span style="top:-0.000005000000000032756em;"><span class="fontsize-ensurer reset-size5 size5"><span style="font-size:0em;">​</span></span><span><span class="op-symbol large-op mop">∏</span></span></span><span class="baseline-fix"><span class="fontsize-ensurer reset-size5 size5"><span style="font-size:0em;">​</span></span>​</span></span></span><span class="mord mathit">d</span><span class="mord mathit">i</span><span class="mord mathit">m</span><span class="mclose">)</span><span class="mord mathit">s</span><span class="mord mathit">i</span><span class="mord mathit" style="margin-right:0.04398em;">z</span><span class="mord mathit">e</span><span class="mord mathit">o</span><span class="mord mathit" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathit" style="margin-right:0.02778em;">D</span><span class="mord mathit">t</span><span class="mord mathit" style="margin-right:0.03588em;">y</span><span class="mord mathit">p</span><span class="mord mathit">e</span><span class="mclose">)</span></span></span></span></span>
+<!-- 自动生成的引用 -->
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Caffe的基础设施]]></title>
+      <url>https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/infrastructure/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>Caffe的基础设施：构建工具，依赖与编码风格</p>
+<a id="more"></a>
+<h2 id="构建工具"><a href="#构建工具" class="headerlink" title="构建工具"></a>构建工具</h2><h3 id="传统方案"><a href="#传统方案" class="headerlink" title="传统方案"></a>传统方案</h3><p>官方维护了Make，社区维护着CMake，但都没有给出完整的依赖配置方案。<br>构建环境需另行参考<a href="http://caffe.berkeleyvision.org/installation.html" target="_blank" rel="external">Caffe | Installation</a></p>
+<h3 id="使用Docker"><a href="#使用Docker" class="headerlink" title="使用Docker"></a>使用Docker</h3><p>在社区支持下，可以很方便的以Docker搭建Caffe环境。</p>
+<ul>
+<li>CPU版本: <code>docker pull kaixhin/caffe</code></li>
+<li>GPU版本: <code>docker pull kaixhin/cuda-caffe</code></li>
+</ul>
+<p>更多镜像请往<a href="https://hub.docker.com/search/?isAutomated=0&amp;isOfficial=0&amp;page=1&amp;pullCount=0&amp;q=caffe&amp;starCount=0" target="_blank" rel="external">Docker Hub</a></p>
+<h2 id="线性代数"><a href="#线性代数" class="headerlink" title="线性代数"></a>线性代数</h2><p>Caffe默认支持三种线性代数库，BLAS，OpenBlas 和 Intel MKL，<br>可以通过<code>Makefile。config</code>进行配置。</p>
+<p>对于买不起Intel MKL的团队，Caffe会设法通过BLAS模拟Caffe需要的 MKL additions，<br>见于 <a href="https://github.com/BVLC/caffe/blob/master/include/caffe/util/mkl_alternate.hpp" target="_blank" rel="external"><code>mkl_alternate.hpp</code></a>。</p>
+<h2 id="cuDNN支持"><a href="#cuDNN支持" class="headerlink" title="cuDNN支持"></a>cuDNN支持</h2><p>较新的Caffe为cuDNN开启了可选支持。<br>目前支持cuDNN的Layer包括：</p>
+<ul>
+<li>ConvolutionLayer</li>
+<li>LCNLayer</li>
+<li>LRNLayer</li>
+<li>PoolingLayer</li>
+<li>ReLULayer</li>
+<li>SigmoidLayer</li>
+<li>SoftmaxLayer</li>
+<li>TanHLayer</li>
+</ul>
+<p>你可在配置文件中通过<code>engine</code>选项手动开启或关闭<code>cuDNN</code>。<br>如果不手动指明，Caffe会自动在cuDNN可用的情况下使用cuDNN。</p>
+<h2 id="编码风格"><a href="#编码风格" class="headerlink" title="编码风格"></a>编码风格</h2><p>Caffe大量的混用了模板和宏，但整体的原则是：</p>
+<ul>
+<li>所有类模板只有一个类型模板参数</li>
+<li>类模板之所以存在，只是为了同时支持</li>
+</ul>
+<h3 id="工具函数"><a href="#工具函数" class="headerlink" title="工具函数"></a>工具函数</h3><p>Caffe在BLAS/OpenBlas/MKL Blas的基础上做了一个微型的兼容层，<br>其主要目的是</p>
+<ul>
+<li>以函数模板的形式统一不同精度的浮点数的函数，如<code>vdSub</code>和<code>vsSub</code>被统一成了<code>caffe::caffe_sub&lt;Dtype&gt;</code></li>
+<li>模拟MKL的专有函数</li>
+</ul>
+<h3 id="类"><a href="#类" class="headerlink" title="类"></a>类</h3><p>类模板及其成员函数模板定义于<code>.hpp</code>，成员函数模板实现于<code>.cpp</code>。<br><code>.cpp</code>尾部给出该类模板的所有可用的特化版本。没有显式方法阻止用户以不被支持的类型模板参数特化一个类模板，<br>但这样做通常会导致在递归地特化该模板类所引用的函数模板时因找不到对应的特化版本而失败。</p>
+<!-- 自动生成的引用 -->
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Overview]]></title>
+      <url>https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/overview/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>如今的 Caffe 是一个仍在积极开发中的通用的神经网络工具包。<br>相较于其他框架，Caffe提供的主要特性包括：</p>
+<ul>
+<li>在现实世界中应用广泛</li>
+<li>极度易用，可以从网络的描述直接开始训练</li>
+<li>提供逾50种预定义的Layer</li>
+<li>代码结构清晰</li>
+<li>可以通过配置文件在CPU/GPU模式之间轻松切换</li>
+</ul>
+<p>与此同时，Caffe也有一些不足：</p>
+<ul>
+<li>版本兼容性不佳，在配合学界开发的另外一些库使用时问题尤其明显</li>
+<li>随着开发的积极进行，Caffe的设计也在逐渐膨胀</li>
+<li>最早的作者Yangqing Jia承认的一些设计问题<!-- TODO 补充该引用 --></li>
+</ul>
+<p>Caffe中的神经网络是以反向传播的过程为主线实现的，<br>并且通过5层抽象来将一个深度学习任务逐步分解并实现。</p>
+<ul>
+<li><code>caffe::Solver</code>级别的描述，定义用于训练和测试网络，描述最基本的网络状态和参数</li>
+<li><code>caffe::Net</code>用与根据网络定义驱动计算，它逐步调用各个层的前向和反向方法以驱动学习过程</li>
+<li><code>caffe::Layer</code>向<code>caffe::Net</code>提供具体的前向和反向时的算法，在<code>caffe::Blob</code>实例上执行具体的计算</li>
+<li><code>caffe::Blob</code>是Caffe中的最基本的可计算数据单元，用于在学习过程中存储、传递数据、网络参数和中间结果，它使用<code>caffe::SyncedMemory</code>作为内存管理的基础设置</li>
+<li><code>caffe::SyncedMemory</code>是Caffe中最底层的部分，它实现了一个小巧的内存同步机制，保证异构计算的过程中GPU和CPU之间的数据能够及时得到同步</li>
+</ul>
+<!-- 自动生成的引用 -->
+]]></content>
+    </entry>
+    
+    <entry>
+      <title><![CDATA[caffe::SyncedMemory]]></title>
+      <url>https://oopsno.github.io/caffe-insight/caffe-insight/2016/04/19/syncedmem/</url>
+      <content type="html"><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"><p>caffe::SycnedMemnoy: RAM与GRAM之间的同步解决方案</p>
+<a id="more"></a>
+<h2 id="依赖关系"><a href="#依赖关系" class="headerlink" title="依赖关系"></a>依赖关系</h2><p><code>caffe::SycnedMemnoy</code> 依赖标准库和CUDA Tool Kit，有Boost库的依赖，<br>但是所使用的<code>boost::shared_ptr</code>已随C++11标准纳入标准库，可取而代之。</p>
+<p><code>caffe::SycnedMemnoy</code> 仅仅被 <code>caffe::Blob</code> 和 <code>caffe::Filter</code> 依赖.</p>
+<h2 id="策略"><a href="#策略" class="headerlink" title="策略"></a>策略</h2><p><code>caffe::SycnedMemnoy</code> 是Caffe用来管理内存的基本组件。Caffe以这样的策略力图实现内存安全：</p>
+<ul>
+<li>多线程仅用于IO</li>
+<li>确保<code>caffe::SycnedMemnoy</code>实现可靠</li>
+<li>运行时使用的内存均直接或间接的由智能指针（<code>boost::shared_ptr</code>）管理</li>
+</ul>
+<p><code>caffe::SycnedMemnoy</code> 的整体策略是<strong>尽可能推迟一切操作</strong>，<br>真正的内存申请发生于第一次内存访问时而不是对象创建时；<br>内存同步发生于下一次内存访问前而不是每一次内存更改后。</p>
+<p>但是这样的设计也使得在用于代码中直接使用<code>caffe::SycnedMemnoy</code>需要格外小心：<br>除非明确知晓你在做什么，否则永远不要缓存从<code>caffe::SycnedMemnoy</code>对象获得的内存地址。</p>
+<h1 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h1><p><code>caffe::SyncedMemory</code> 主要控制内存的申请和释放，不关心内存的具体用途。<br>在初始化时会同时在RAM和GRAM（如果启用GPU）中申请指定大小的内存。</p>
+<p><code>caffe::SyncedMemory</code> 有6个用于暴露/重置原始内存的方法:</p>
+<ul>
+<li><code>{set,mutable}_{cpu,gpu}_data()</code></li>
+<li><code>{cpu,gpu}_data()</code></li>
+</ul>
+<p><code>caffe::SyncedMemory</code> 有2个用于显式同步内存的方法：</p>
+<ul>
+<li><code>to_gpu()</code></li>
+<li><code>to_cpu()</code></li>
+</ul>
+<p>此外，另有一个用于向GRAM异步推送数据的方法，<br><code>caffe::SyncedMemory::async_gpu_push</code>，<br>存在于，<br>但是从未被引用。</p>
+<p><code>caffe::SyncedMemory</code> 会在上面罗列的6个暴露真实地址的方法返回之前调用适当的同步方法，<br>以保证每次访问时内存时，RAM和GRAM中的内容是同步的。</p>
+<p>Caffe使用枚举类型<code>caffe::SyncedMemory::SyncedHead</code>状态每一个<code>caffe::SyncedMemory</code><br>对象的内部状态</p>
+<ul>
+<li><code>UNINITIALIZED</code>: 对象构造完成之后的的初始状态</li>
+<li><code>HEAD_AT_CPU</code>: RAM持有最新副本</li>
+<li><code>HEAD_AT_GPU</code>: GRAM持有最新副本</li>
+<li><code>SYNCED</code>: 已同步, 该状态<strong>只会出现在GPU模式下</strong></li>
+</ul>
+<p>它们之间的状态迁移可以用这样一张图来描述，<br>其中红色线条代表GRAM访问，蓝色线条代表RAM访问。</p>
+<div class="figure">
+  <img alt="状态转移图 - GPU Mode" src="fa9ea320a6f009b5208b7e7e3d334e53d09f0dc0.png">
+  <p class="caption">状态转移图 - GPU Mode</p>
+</div>
+
+<div class="figure">
+  <img alt="状态转移图 - CPU Mode" src="d16b7b4443880060cffc289d2539a61bacffc931.png">
+  <p class="caption">状态转移图 - CPU Mode</p>
+</div>
+
+<!-- 自动生成的引用 -->
+]]></content>
+    </entry>
+    
+  
+  
+</search>
