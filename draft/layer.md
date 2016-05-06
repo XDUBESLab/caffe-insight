@@ -32,11 +32,13 @@ caffe::Layer的主要目标是完成从具体计算任务到抽象的计算单�
 + `Forward`&`Backword`: 计算的抽象方法 
 + `Reshape`: 调整top的维度
 
+<!--
 > Layers must implement a Forward function, in which they take their input
 > (bottom) Blobs (if any) and compute their output Blobs (if any).
 > They may also implement a Backward function, in which they compute the error
 > gradients with respect to their input Blobs, given the error gradients with
 > their output Blobs.
+-->
 
 每个继承`caffe::Layer`以实现特定Layer的类最终必须实现以下函数：
 
