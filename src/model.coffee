@@ -38,6 +38,7 @@ class Member extends Indexable
     attr = def['$']
     super def.name, def.refid, attr.kind
     @fullname = "#{parent}#{Indexable.sep}#{def.name}"
+    @definition = def.definition
     @access = attr.prot
     @static = attr.static is 'yes'
     @mutable = attr.mutable is 'yes'
